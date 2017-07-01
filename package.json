@@ -1,0 +1,24 @@
+{
+  "name": "nodejs-commander-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "commander": "^2.10.0",
+    "mkdirp": "^0.5.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zengxp0605/nodejs-commander-demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zengxp0605/nodejs-commander-demo/issues"
+  },
+  "homepage": "https://github.com/zengxp0605/nodejs-commander-demo#readme"
+}

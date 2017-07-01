@@ -1,0 +1,180 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+ var fs = require('fs'),
+ os = require('os'),
+ path = require('path'),
+ mkdirp = require('mkdirp'),
+ exec = require('child_process').exec,
+ spawn = require('child_process').spawn,
+ version = require('../package.json').version,
+ program = require('commander');
+
+ var log = console.log;
+
+/**
+ *  Constant Variables
+ */
+ var KILL_CMD_LUX = 'kill -9 `ps -ef|grep node|awk \'{print $2}\'`';
+ var KILL_CMD_WIN = 'taskkill /im node.exe /f';
+
+ var CUR_DIR = process.cwd();
+ console.log('CUR_DIR: ', CUR_DIR);
+ var DEFAULT_GAME_SERVER_DIR = CUR_DIR;
+ var DEFAULT_ENV = 'dev';
+ var DEFAULT_USERNAME = 'admin';
+ var DEFAULT_PWD = 'admin';
+
+ program.version(version);
+
+ program.command('start')
+ .description('start the application')
+ .option('-e, --env <env>', 'the used environment', DEFAULT_ENV)
+ .option('-d, --directory, <directory>', 'the code directory', DEFAULT_GAME_SERVER_DIR)
+ .action(function(opts) {
+  //log('-------start: ', opts);
+  log('opts input: ', opts.env, opts.directory);
+  start(opts);
+});
+
+ program.command('test')
+ .description('test commander')
+ .option('-u, --username <username>', 'administration user name', DEFAULT_USERNAME)
+ .option('-p, --password <password>', 'administration password', DEFAULT_PWD)
+ .action(function(opts) {
+  //log('-------test: ', opts);
+  confirm('Test for confirm. Do you want make directory for test, input yes/no :  ', function(isConfirm){
+    log('arguments: ',arguments);
+    if(isConfirm){
+      var testDir = path.resolve(CUR_DIR, 'test');
+      mkdir(testDir);
+      process.exit(0);
+    }
+  })
+});
+
+ program.parse(process.argv);
+
+/**
+ * Start application.
+ *
+ * @param {Object} opts options for `start` operation
+ */
+ function start(opts) {
+  var absScript = path.resolve(opts.directory, 'app.js');
+  if (!fs.existsSync(absScript)) {
+    abort(SCRIPT_NOT_FOUND);
+  }
+
+  var ls;
+  var type = opts.type || constants.RESERVED.ALL;
+  var params = [absScript, 'env=' + opts.env, 'type=' + type];
+  if(!!opts.id) {
+    params.push('startId=' + opts.id);
+  }
+  if (opts.daemon) {
+    ls = spawn(process.execPath, params, {detached: true, stdio: 'ignore'});
+    ls.unref();
+    console.log(DAEMON_INFO);
+    process.exit(0);
+  } else {
+    ls = spawn(process.execPath, params);
+    ls.stdout.on('data', function(data) {
+      console.log(data.toString());
+    });
+    ls.stderr.on('data', function(data) {
+      console.log(data.toString());
+    });
+  }
+}
+
+/**
+ * Prompt confirmation with the given `msg`.
+ *
+ * @param {String} msg
+ * @param {Function} fn
+ */
+ function confirm(msg, fn) {
+  prompt(msg, function(val) {
+    fn(/^ *y(es)?/i.test(val));
+  });
+}
+
+/**
+ * Prompt input with the given `msg` and callback `fn`.
+ *
+ * @param {String} msg
+ * @param {Function} fn
+ */
+ function prompt(msg, fn) {
+  if(' ' === msg[msg.length - 1]) {
+    process.stdout.write(msg);
+  } else {
+    console.log(msg);
+  }
+  process.stdin.setEncoding('ascii');
+  process.stdin.once('data', function(data) {
+    fn(data);
+  }).resume();
+}
+
+/**
+ * Exit with the given `str`.
+ *
+ * @param {String} str
+ */
+ function abort(str) {
+  console.error(str);
+  process.exit(1);
+}
+
+/**
+ * Copy template files to project.
+ *
+ * @param {String} origin
+ * @param {String} target
+ */
+ function copy(origin, target) {
+  if(!fs.existsSync(origin)) {
+    abort(origin + 'does not exist.');
+  }
+  if(!fs.existsSync(target)) {
+    mkdir(target);
+    console.log('   create : '.green + target);
+  }
+  fs.readdir(origin, function(err, datalist) {
+    if(err) {
+      abort(FILEREAD_ERROR);
+    }
+    for(var i = 0; i < datalist.length; i++) {
+      var oCurrent = path.resolve(origin, datalist[i]);
+      var tCurrent = path.resolve(target, datalist[i]);
+      if(fs.statSync(oCurrent).isFile()) {
+        fs.writeFileSync(tCurrent, fs.readFileSync(oCurrent, ''), '');
+        console.log('   create : '.green + tCurrent);
+      } else if(fs.statSync(oCurrent).isDirectory()) {
+        copy(oCurrent, tCurrent);
+      }
+    }
+  });
+}
+
+/**
+ * Mkdir -p.
+ *
+ * @param {String} path
+ * @param {Function} fn
+ */
+ function mkdir(path, fn) {
+  mkdirp(path, 0755, function(err){
+    if(err) {
+      throw err;
+    }
+    console.log('   create : '.green + path);
+    if(typeof fn === 'function') {
+      fn();
+    }
+  });
+}
